@@ -1,19 +1,25 @@
 """Per-task outcome and accuracy of one original-side parity run.
 
-BFCL score files list only the failed entries (after a header line), so an entry
-is correct when it was generated and is not in the score file's failure list.
+BFCL score files start with a header line ({"accuracy", "correct_count",
+"total_count"}) followed by one line per failed entry. An entry is correct when it
+was scored and is not in the failure list. The collector stops with an error if a
+category's result or score file is missing, or if the header counts do not match
+the result file, so that a missing evaluation can never count as success.
+
 Entries whose model result is an inference error ("Error during inference: ...")
-are listed separately so that they can be re-generated as infrastructure failures.
+are infrastructure failures: they are reported in `inference_errors`, left out of
+`per_task` and of the accuracy, and should be re-generated (see README).
 """
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 
 def load_jsonl(path: Path) -> list[dict]:
-    if not path.exists():
-        return []
+    if not path.is_file():
+        sys.exit(f"missing file: {path}")
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
@@ -36,8 +42,15 @@ def main() -> None:
         group = "live" if category.startswith("live_") else "non_live"
         results = load_jsonl(args.run_dir / "result" / model_dir / group / f"BFCL_v4_{category}_result.json")
         scores = load_jsonl(args.run_dir / "score" / model_dir / group / f"BFCL_v4_{category}_score.json")
+        header = scores[0]
+        if "total_count" not in header or "correct_count" not in header:
+            sys.exit(f"{category}: score file has no header line")
+        if header["total_count"] != len(results):
+            sys.exit(f"{category}: scored {header['total_count']} entries but the result file has {len(results)}")
+        failed = {s["id"] for s in scores[1:]}
+        if header["correct_count"] != len(results) - len(failed):
+            sys.exit(f"{category}: header correct_count does not match the failure list")
         generated = {r["id"]: r for r in results}
-        failed = {s["id"] for s in scores[1:] if "id" in s}
         for test_id in ids:
             if test_id not in generated:
                 missing.append(test_id)
@@ -45,6 +58,7 @@ def main() -> None:
             result = generated[test_id]["result"]
             if isinstance(result, str) and result.startswith("Error during inference"):
                 inference_errors.append(test_id)
+                continue
             per_task[test_id] = 0 if test_id in failed else 1
 
     n = len(per_task)
@@ -60,7 +74,10 @@ def main() -> None:
         "per_task": per_task,
     }
     args.out.write_text(json.dumps(summary, indent=2))
-    print(json.dumps({k: v for k, v in summary.items() if k not in ("per_task",)}, indent=2))
+    print(json.dumps({k: v for k, v in summary.items() if k != "per_task"}, indent=2)[:2000])
+    if missing or inference_errors:
+        print("Incomplete run: re-generate the missing / errored entries before using this run.", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":
