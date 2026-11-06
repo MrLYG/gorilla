@@ -78,4 +78,11 @@ Each original run writes `harbor_parity/runs/<run>/summary.json` (`accuracy`, `n
 
 ## Results
 
-RESULTS_PENDING
+Full set (3635 tasks), 3 runs per side, run at the same time on 2026-11-06. Accuracy in percent, mean ± sample SEM:
+
+| Side | Runs | Mean ± SEM |
+|---|---|---|
+| Original (this branch) | 77.96, 78.13, 78.27 | 78.12 ± 0.09 |
+| Harbor (`bfcl-fc-agent@1.0.0`, Harbor 0.25.0) | 78.18, 78.24, 78.21 | 78.21 ± 0.02 |
+
+The ranges overlap. Model `deepseek-v4.1-flash`, served as `deepseek-v4-1-flash-261017`. No inference errors.
