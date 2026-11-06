@@ -2230,10 +2230,29 @@ third_party_inference_model_map = {
 }
 
 
+# Harbor parity: an OpenAI-compatible endpoint (OPENAI_BASE_URL / OPENAI_API_KEY)
+# queried in function-calling mode with the generic OpenAI chat-completions handler.
+harbor_parity_model_map = {
+    "deepseek-v4.1-flash-FC": ModelConfig(
+        model_name="deepseek-v4.1-flash",
+        display_name="DeepSeek-V4.1-Flash (FC) (OpenAI-compatible endpoint)",
+        url="https://api-docs.deepseek.com/",
+        org="DeepSeek",
+        license="MIT",
+        model_handler=OpenAICompletionsHandler,
+        input_price=None,
+        output_price=None,
+        is_fc_model=True,
+        underscore_to_dot=True,
+    ),
+}
+
+
 MODEL_CONFIG_MAPPING = {
     **api_inference_model_map,
     **local_inference_model_map,
     **third_party_inference_model_map,
+    **harbor_parity_model_map,
 }
 
 # Uncomment to get the supported_models.py file contents
