@@ -41,35 +41,37 @@ pip install soundfile          # imported by qwen-agent, not pulled in by `pip i
 export OPENAI_API_KEY=...  OPENAI_BASE_URL=...          # endpoint serving deepseek-v4.1-flash
 ```
 
-Setup, Harbor side (adapters repository root, Harbor 0.25.0):
+Setup, Harbor side (Harbor 0.25.0). Set the two checkout paths first:
 
 ```bash
-(cd src/bfcl-autoadapter && uv run bfcl-autoadapter --output-dir ../../datasets/bfcl-autoadapter)
-HARBOR='uvx --python 3.12 --from harbor[daytona]==0.25.0 --with ./src/bfcl-autoadapter harbor'
+ADAPTERS=/path/to/adapters                                   # harbor-index/adapter-automation checkout
+BFCL=/path/to/gorilla/berkeley-function-call-leaderboard     # this fork, branch harbor-parity
+cd $ADAPTERS/src/bfcl-autoadapter && uv run bfcl-autoadapter --output-dir $ADAPTERS/datasets/bfcl-autoadapter
+HARBOR="uvx --python 3.12 --from harbor[daytona]==0.25.0 --with $ADAPTERS/src/bfcl-autoadapter harbor"
 AGENT='-a bfcl_autoadapter.agents.bfcl_fc_agent:BfclFcAgent -m openai/deepseek-v4.1-flash'
 ENV='-e daytona --ek auto_snapshot=true'
 ```
 
-Run both sides at the same time, in this order:
+Run both sides at the same time, in this order (original side in `$BFCL`, Harbor side in `$ADAPTERS`):
 
 ```bash
 # 1. Sanity check (10 tasks) on both sides
-harbor_parity/run_parity.sh sanity 10 harbor_parity/sanity_task_ids.json
-$HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 10 --job-name harbor-sanity \
-  $(python -c "import json;print(' '.join('-i bfcl-autoadapter__'+i.lower().replace('_','-') for v in json.load(open('harbor_parity/sanity_task_ids.json')).values() for i in v))")
+(cd $BFCL && harbor_parity/run_parity.sh sanity 10 harbor_parity/sanity_task_ids.json)
+(cd $ADAPTERS && $HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 10 --job-name harbor-sanity \
+  $(python -c "import json,sys;print(' '.join('-i bfcl-autoadapter__'+i.lower().replace('_','-') for v in json.load(open(sys.argv[1])).values() for i in v))" $BFCL/harbor_parity/sanity_task_ids.json))
 
 # 2. One full run (3635 tasks) on both sides
-harbor_parity/run_parity.sh run1 100
-$HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 100 --job-name harbor-run1
+(cd $BFCL && harbor_parity/run_parity.sh run1 100)
+(cd $ADAPTERS && $HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 100 --job-name harbor-run1)
 
 # 3. Runs 2 and 3 on both sides
-harbor_parity/run_parity.sh run2 100 & harbor_parity/run_parity.sh run3 100
-$HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 50 --job-name harbor-run2 &
-$HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 50 --job-name harbor-run3
+(cd $BFCL && harbor_parity/run_parity.sh run2 100 && harbor_parity/run_parity.sh run3 100)
+(cd $ADAPTERS && $HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 50 --job-name harbor-run2) &
+(cd $ADAPTERS && $HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 50 --job-name harbor-run3)
 
 # Infrastructure failures only (never because of the score):
-harbor_parity/retry_errors.sh run1 100                       # original side
-$HARBOR job resume -p jobs/harbor-run1 -f <ExceptionType>    # Harbor side
+(cd $BFCL && harbor_parity/retry_errors.sh run1 100)                          # original side
+(cd $ADAPTERS && $HARBOR job resume -p jobs/harbor-run1 -f <ExceptionType>)   # Harbor side
 ```
 
 Each original run writes `harbor_parity/runs/<run>/summary.json` (`accuracy`, `n_correct`, `n_tasks`, `per_task`). On the Harbor side the accuracy of a run is the job's mean reward. Report mean ± sample SEM over the 3 runs of each side and check that the run ranges overlap.
