@@ -22,7 +22,9 @@ unchanged checker fails every answer): `simple_java_36`, `simple_java_65`,
 `live_simple_106-63-0`, `live_simple_112-68-0`, `live_multiple_862-181-3`,
 `live_multiple_964-207-0`.
 
-## Parity settings (identical on both sides)
+## Parity settings
+
+The same on both sides, except the overall time limit (see "Time limit").
 
 - Model: `deepseek-v4.1-flash` through an OpenAI-compatible endpoint (`OPENAI_BASE_URL`), function-calling mode, `temperature=0.001` (the `bfcl generate` default), `store=False`, no `max_tokens`, no system prompt; tools = the hinted function docs converted with `convert_to_tool(..., OPENAI_COMPLETIONS)`.
 - Client: only `OPENAI_API_KEY` and `OPENAI_BASE_URL` are set. `OPENAI_DEFAULT_HEADERS` (extra HTTP headers, read by `OpenAICompletionsHandler`) was not set and no `.env` file was used, so the requests carry the client's default headers, as on the Harbor side.
