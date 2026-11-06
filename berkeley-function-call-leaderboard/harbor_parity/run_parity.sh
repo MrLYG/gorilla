@@ -8,7 +8,8 @@
 # `deepseek-v4.1-flash`). Generates responses for the task IDs in the ids file
 # (default: harbor_parity/all_task_ids.json = the 3635 Harbor tasks), scores them
 # with the unchanged BFCL evaluator, and writes harbor_parity/runs/<run_name>/summary.json.
-# Re-running with the same run name only generates entries that are still missing.
+# Each call is a fresh run: the run name must be new. To finish a run that hit
+# inference (API) errors, use harbor_parity/retry_errors.sh <run_name>.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,6 +21,10 @@ CATEGORIES="simple_python,simple_java,simple_javascript,multiple,parallel,parall
 
 export BFCL_PROJECT_ROOT="$PWD"
 RUN_DIR="harbor_parity/runs/$RUN"
+if [ -e "$RUN_DIR" ]; then
+  echo "error: $RUN_DIR already exists; use a new run name (or harbor_parity/retry_errors.sh $RUN for API errors)" >&2
+  exit 1
+fi
 mkdir -p "$RUN_DIR"
 
 # `bfcl generate --run-ids` reads the IDs from <project root>/test_case_ids_to_generate.json

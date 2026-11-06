@@ -74,7 +74,7 @@ Run both sides at the same time, in this order (original side in `$BFCL`, Harbor
 (cd $ADAPTERS && $HARBOR job resume -p jobs/harbor-run1 -f <ExceptionType>)   # Harbor side
 ```
 
-Each original run writes `harbor_parity/runs/<run>/summary.json` (`accuracy`, `n_correct`, `n_tasks`, `per_task`). On the Harbor side the accuracy of a run is the job's mean reward. Report mean ± sample SEM over the 3 runs of each side and check that the run ranges overlap.
+Each original run writes `harbor_parity/runs/<run>/summary.json` (`accuracy`, `n_correct`, `n_tasks`, `per_task`). `run_parity.sh` refuses an existing run name, so every run makes fresh model calls; `retry_errors.sh` only re-generates entries that failed with an API error. On the Harbor side the accuracy of a run is the job's mean reward. Report mean ± sample SEM over the 3 runs of each side and check that the run ranges overlap.
 
 ## Results
 
