@@ -11,7 +11,7 @@ RUN="${1:?run name}"
 THREADS="${2:-32}"
 IDS_FILE="${3:-harbor_parity/all_task_ids.json}"
 MODEL="deepseek-v4.1-flash-FC"
-CATEGORIES="simple_python simple_java simple_javascript multiple parallel parallel_multiple irrelevance live_simple live_multiple live_parallel live_parallel_multiple live_irrelevance live_relevance"
+CATEGORIES="simple_python,simple_java,simple_javascript,multiple,parallel,parallel_multiple,irrelevance,live_simple,live_multiple,live_parallel,live_parallel_multiple,live_irrelevance,live_relevance"
 export BFCL_PROJECT_ROOT="$PWD"
 RUN_DIR="harbor_parity/runs/$RUN"
 
@@ -28,8 +28,7 @@ bfcl generate --model "$MODEL" --run-ids --allow-overwrite --num-threads "$THREA
   --result-dir "$RUN_DIR/result" >> "$RUN_DIR/generate.log" 2>&1
 
 rm -rf "$RUN_DIR/score"
-# shellcheck disable=SC2086
-bfcl evaluate --model "$MODEL" --test-category $CATEGORIES \
+bfcl evaluate --model "$MODEL" --test-category "$CATEGORIES" \
   --result-dir "$RUN_DIR/result" --score-dir "$RUN_DIR/score" --partial-eval \
   > "$RUN_DIR/evaluate.log" 2>&1
 
