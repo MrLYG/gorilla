@@ -25,6 +25,8 @@ unchanged checker fails every answer): `simple_java_36`, `simple_java_65`,
 ## Parity settings (identical on both sides)
 
 - Model: `deepseek-v4.1-flash` through an OpenAI-compatible endpoint (`OPENAI_BASE_URL`), function-calling mode, `temperature=0.001` (the `bfcl generate` default), `store=False`, no `max_tokens`, no system prompt; tools = the hinted function docs converted with `convert_to_tool(..., OPENAI_COMPLETIONS)`.
+- Client: only `OPENAI_API_KEY` and `OPENAI_BASE_URL` are set. `OPENAI_DEFAULT_HEADERS` (extra HTTP headers, read by `OpenAICompletionsHandler`) was not set and no `.env` file was used, so the requests carry the client's default headers, as on the Harbor side.
+- Time limit: BFCL has none; each Harbor task gives the agent 600 s. In the runs below the longest model call took 44.7 s here and 44.8 s on the Harbor side.
 - Retries: BFCL's backoff on `RateLimitError` only; other API errors are recorded as `Error during inference: ...` and re-generated as infrastructure failures (`retry_errors.sh`).
 - Metric: accuracy over the 3635 tasks (fraction of tasks that BFCL's checker accepts).
 - Harbor side: the adapter's `bfcl-fc-agent` (`bfcl_autoadapter.agents.bfcl_fc_agent:BfclFcAgent`), which sends the same request and decodes the response the same way.
@@ -64,8 +66,9 @@ Run both sides at the same time, in this order (original side in `$BFCL`, Harbor
 (cd $BFCL && harbor_parity/run_parity.sh run1 100)
 (cd $ADAPTERS && $HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 100 --job-name harbor-run1)
 
-# 3. Runs 2 and 3 on both sides
-(cd $BFCL && harbor_parity/run_parity.sh run2 100 && harbor_parity/run_parity.sh run3 100)
+# 3. Runs 2 and 3 on both sides, all four at the same time
+(cd $BFCL && harbor_parity/run_parity.sh run2 50) &
+(cd $BFCL && harbor_parity/run_parity.sh run3 50) &
 (cd $ADAPTERS && $HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 50 --job-name harbor-run2) &
 (cd $ADAPTERS && $HARBOR run -p datasets/bfcl-autoadapter $AGENT $ENV -n 50 --job-name harbor-run3)
 
@@ -85,4 +88,4 @@ Full set (3635 tasks), 3 runs per side, run at the same time on 2026-11-06. Accu
 | Original (this branch) | 77.96, 78.13, 78.27 | 78.12 ± 0.09 |
 | Harbor (`bfcl-fc-agent@1.0.0`, Harbor 0.25.0) | 78.18, 78.24, 78.21 | 78.21 ± 0.02 |
 
-The ranges overlap. Model `deepseek-v4.1-flash`, served as `deepseek-v4-1-flash-261017`. No inference errors.
+The ranges overlap. Model `deepseek-v4.1-flash`, served as `deepseek-v4-1-flash-261017`. No inference errors. Concurrency: run 1 with 100 threads (Harbor `-n 100`); runs 2 and 3 at the same time with 50 threads each (Harbor `-n 50` each).

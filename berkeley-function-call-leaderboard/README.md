@@ -1,5 +1,7 @@
 # Berkeley Function Calling Leaderboard (BFCL)
 
+> **Branch `harbor-parity`:** this branch adds the original-side setup for the parity experiment of the Harbor adapter `bfcl-autoadapter` (one model entry and the scripts in [`harbor_parity/`](harbor_parity/)). Reproduction steps and results: [`harbor_parity/README.md`](harbor_parity/README.md). Nothing else in BFCL is changed.
+
 ## Table of Contents
 
 - [Berkeley Function Calling Leaderboard (BFCL)](#berkeley-function-calling-leaderboard-bfcl)
